@@ -1,4 +1,7 @@
+import { useNavigate } from "react-router-dom";
+
 export const HeroTitle = () => {
+  const navigate = useNavigate();
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -21,11 +24,14 @@ export const HeroTitle = () => {
         </p>
         
         <div className="flex gap-4">
-          <button className="px-8 py-3 bg-primary text-primary-foreground font-semibold rounded-xl neon-glow hover:scale-105 transition-all duration-300">
-            Play Now
+          <button 
+            onClick={() => navigate('/game')}
+            className="px-8 py-3 bg-primary text-primary-foreground font-semibold rounded-xl neon-glow hover:scale-105 transition-all duration-300"
+          >
+            שחק עכשיו
           </button>
           <button className="px-8 py-3 border-2 border-neon-purple text-neon-purple font-semibold rounded-xl hover:bg-neon-purple hover:text-white transition-all duration-300">
-            Learn Rules
+            כללי המשחק
           </button>
         </div>
       </div>
