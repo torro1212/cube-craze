@@ -2,41 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Cube Craze - Futuristic 3D Game Design System */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
+    /* Game Brand Colors - Bright Neon Palette */
+    --neon-turquoise: 195 100% 50%;     /* #00C6FF */
+    --neon-purple: 261 100% 50%;        /* #7A00FF */
+    --neon-yellow: 46 100% 50%;         /* #FFD400 */
+    --neon-magenta: 304 100% 62%;       /* #FF3EE9 */
+    
+    /* Space Background Gradient */
+    --space-dark: 240 54% 9%;           /* #0A0A1F */
+    --space-light: 233 57% 26%;         /* #1F2760 */
+    
+    /* Game UI Colors */
+    --background: var(--space-dark);
+    --foreground: 0 0% 100%;
+    
+    --card: 240 54% 12%;
+    --card-foreground: 0 0% 100%;
+    
+    --popover: 240 54% 12%;
+    --popover-foreground: 0 0% 100%;
+    
+    --primary: var(--neon-turquoise);
+    --primary-foreground: 240 54% 9%;
+    
+    --secondary: var(--neon-purple);
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 240 54% 15%;
+    --muted-foreground: 0 0% 70%;
+    
+    --accent: var(--neon-yellow);
+    --accent-foreground: 240 54% 9%;
+    
+    --destructive: var(--neon-magenta);
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 240 54% 20%;
+    --input: 240 54% 15%;
+    --ring: var(--neon-turquoise);
+    
+    /* Game-specific design tokens */
+    --game-glow: 0 0 40px;
+    --game-highlight: 0 0% 100%;
+    --game-shadow: 0 10px 30px -10px;
+    
+    /* Gradients */
+    --gradient-space: linear-gradient(135deg, hsl(var(--space-dark)), hsl(var(--space-light)));
+    --gradient-neon: linear-gradient(45deg, hsl(var(--neon-turquoise)), hsl(var(--neon-purple)));
+    --gradient-power: linear-gradient(135deg, hsl(var(--neon-yellow)), hsl(var(--neon-magenta)));
+    --gradient-game-board: linear-gradient(135deg, hsla(240, 54%, 12%, 0.8), hsla(240, 54%, 20%, 0.9));
+    
+    /* Animations */
+    --transition-game: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-glow: all 0.5s ease-in-out;
+    
+    --radius: 1rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -101,5 +125,87 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    background: var(--gradient-space);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* 3D Game Elements */
+  .game-cube {
+    @apply relative;
+    background: var(--gradient-game-board);
+    border: 2px solid hsl(var(--game-highlight) / 0.3);
+    border-radius: var(--radius);
+    box-shadow: 
+      var(--game-shadow) hsl(var(--primary) / 0.3),
+      inset 0 1px 0 hsl(var(--game-highlight) / 0.2);
+    backdrop-filter: blur(10px);
+    transition: var(--transition-game);
+  }
+  
+  .game-cube:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      var(--game-shadow) hsl(var(--primary) / 0.5),
+      inset 0 1px 0 hsl(var(--game-highlight) / 0.3);
+  }
+  
+  .neon-glow {
+    filter: drop-shadow(var(--game-glow) hsl(var(--primary) / 0.6));
+    transition: var(--transition-glow);
+  }
+  
+  .neon-text {
+    text-shadow: 
+      0 0 10px hsl(var(--primary)),
+      0 0 20px hsl(var(--primary)),
+      0 0 30px hsl(var(--primary));
+    background: var(--gradient-neon);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    animation: pulse-glow 2s ease-in-out infinite alternate;
+  }
+  
+  .power-up-icon {
+    @apply game-cube;
+    background: var(--gradient-power);
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .game-board-tilt {
+    transform: perspective(1000px) rotateX(5deg) rotateY(15deg);
+    transform-style: preserve-3d;
+  }
+}
+
+@layer utilities {
+  /* Game Animations */
+  @keyframes pulse-glow {
+    0% {
+      filter: drop-shadow(0 0 5px hsl(var(--primary)));
+    }
+    100% {
+      filter: drop-shadow(0 0 25px hsl(var(--primary)));
+    }
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  @keyframes starfield {
+    0% {
+      transform: translateY(0px);
+    }
+    100% {
+      transform: translateY(-100px);
+    }
   }
 }

@@ -61,6 +61,17 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Game-specific neon colors
+				neon: {
+					turquoise: 'hsl(var(--neon-turquoise))',
+					purple: 'hsl(var(--neon-purple))',
+					yellow: 'hsl(var(--neon-yellow))',
+					magenta: 'hsl(var(--neon-magenta))'
+				},
+				space: {
+					dark: 'hsl(var(--space-dark))',
+					light: 'hsl(var(--space-light))'
 				}
 			},
 			borderRadius: {
