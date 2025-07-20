@@ -159,28 +159,28 @@ const Game = () => {
     return () => clearTimeout(gravityTimer);
   }, [generateRandomShapes]);
 
-  // Check if shape can be placed at position
+  // Check if shape can be placed at position with improved validation
   const canPlaceShape = (shape: number[][], row: number, col: number): boolean => {
-    console.log(`Checking if shape can be placed at ${row},${col}`);
+    if (!shape || !board) return false;
+    
     for (let r = 0; r < shape.length; r++) {
       for (let c = 0; c < shape[r].length; c++) {
         if (shape[r][c] === 1) {
           const newRow = row + r;
           const newCol = col + c;
           
+          // Check bounds
           if (newRow >= 10 || newCol >= 10 || newRow < 0 || newCol < 0) {
-            console.log(`Position ${newRow},${newCol} is out of bounds`);
             return false;
           }
           
+          // Check if cell is occupied
           if (board[newRow][newCol] !== null) {
-            console.log(`Position ${newRow},${newCol} is occupied by ${board[newRow][newCol]}`);
             return false;
           }
         }
       }
     }
-    console.log(`Shape can be placed at ${row},${col}`);
     return true;
   };
 
@@ -347,7 +347,7 @@ const Game = () => {
     }
   }, [currentShapes, canPlaceAnyShape, shieldActive, generateRandomShapes]);
 
-  // Handle cell click for shape placement
+  // Enhanced cell click handler with improved feedback
   const handleCellClick = (row: number, col: number) => {
     if (clearLineMode) {
       // Check if click is on an edge
@@ -387,9 +387,36 @@ const Game = () => {
           duration: 2000
         });
       }
-    } else if (selectedShape && canPlaceShape(selectedShape.shape, row, col) && !isPlacingShape) {
-      placeShape(selectedShape, row, col);
-      setSelectedShape(null);
+    } else if (selectedShape && !isPlacingShape) {
+      if (canPlaceShape(selectedShape.shape, row, col)) {
+        placeShape(selectedShape, row, col);
+        setSelectedShape(null);
+        // Enhanced success feedback
+        toast.success("Perfect placement! 🎯", {
+          description: `${selectedShape.size}-block ${selectedShape.color} shape placed`,
+          duration: 2000
+        });
+      } else {
+        // Enhanced error feedback with helpful hints
+        toast.error("Cannot place here! 🚫", {
+          description: "Try a different position or rotate the shape",
+          duration: 2000
+        });
+        
+        // Visual feedback - shake animation for invalid placement
+        const cellElement = document.querySelector(`[data-cell="${row}-${col}"]`);
+        if (cellElement) {
+          cellElement.classList.add('shake-animation');
+          setTimeout(() => {
+            cellElement.classList.remove('shake-animation');
+          }, 500);
+        }
+      }
+    } else if (!selectedShape) {
+      toast.info("Select a shape first! 👆", {
+        description: "Tap a shape from the bottom panel to select it",
+        duration: 2000
+      });
     }
   };
 
@@ -944,10 +971,10 @@ const Game = () => {
                       onMouseLeave={() => setHoveredCell(null)}
                       disabled={isPlacingShape}
                                               className={`
-                        w-6 h-6 sm:w-8 sm:h-8 game-block transition-all duration-200
+                        w-6 h-6 sm:w-8 sm:h-8 game-block transition-all duration-300 ease-out
                         ${cell 
-                          ? `bg-${cell}-500 border-white/30 shadow-md hover:shadow-lg` 
-                          : 'bg-blue-900 border-white/20' // כחול קבוע לרקע הלוח
+                          ? `bg-${cell}-500 border-white/30 shadow-md hover:shadow-lg hover:scale-105` 
+                          : 'bg-blue-900 border-white/20 hover:bg-blue-800 hover:scale-105' // כחול קבוע לרקע הלוח עם הובר
                         }
                         ${touchDraggedShape && isDragging && hoveredCell && (() => {
                           // בדוק אם התא הנוכחי הוא חלק מהצורה שאפשר להניח
@@ -1007,10 +1034,14 @@ const Game = () => {
                     }}
                     disabled={isPlacingShape}
                     className={`
-                      shape-preview p-2 sm:p-3 transition-all duration-200 flex-shrink-0
-                      ${selectedShape?.id === shape.id ? 'selected' : ''}
-                      ${isPlacingShape ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                      ${isDragging && touchDraggedShape?.id === shape.id ? 'opacity-30 scale-90' : ''}
+                      relative p-2 sm:p-3 rounded-lg border-2 transition-all duration-300 ease-out cursor-grab flex-shrink-0
+                      ${selectedShape?.id === shape.id 
+                        ? 'border-neon-cyan ring-2 ring-neon-cyan/50 shadow-lg shadow-neon-cyan/30 scale-110 animate-pulse' 
+                        : 'border-white/20 hover:border-white/40 hover:scale-105 hover:shadow-lg'
+                      }
+                      ${isPlacingShape ? 'opacity-50 cursor-not-allowed' : ''}
+                      ${isDragging && touchDraggedShape?.id === shape.id ? 'opacity-50 cursor-grabbing' : ''}
+                      active:scale-95 select-none shape-preview
                     `}
                     style={{
                       touchAction: 'none'
