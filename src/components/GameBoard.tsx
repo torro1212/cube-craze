@@ -5,19 +5,14 @@ interface GameBoardProps {
 }
 
 export const GameBoard = ({ className = "" }: GameBoardProps) => {
-  // Create a 10x10 grid with some sample blocks
+  // Create a 9x9 grid (like in the image)
   const [board, setBoard] = useState(() => {
-    const initialBoard = Array(10).fill(null).map(() => Array(10).fill(null));
+    const initialBoard = Array(9).fill(null).map(() => Array(9).fill(null));
     
-    // Add some sample blocks for visual effect
-    const colors = ['neon-turquoise', 'neon-purple', 'neon-yellow', 'neon-magenta'];
-    
-    // Fill bottom rows with some blocks
-    for (let row = 6; row < 10; row++) {
-      for (let col = 0; col < 10; col++) {
-        if (Math.random() > 0.3) {
-          initialBoard[row][col] = colors[Math.floor(Math.random() * colors.length)];
-        }
+    // Fill all cells with blue color - all cells are always blue
+    for (let row = 0; row < 9; row++) {
+      for (let col = 0; col < 9; col++) {
+        initialBoard[row][col] = 'blue';
       }
     }
     
@@ -27,18 +22,12 @@ export const GameBoard = ({ className = "" }: GameBoardProps) => {
   return (
     <div className={`game-board-tilt ${className}`}>
       <div className="game-cube p-4 bg-opacity-30">
-        <div className="grid grid-cols-10 gap-1">
+        <div className="grid grid-cols-9 gap-1">
           {board.map((row, rowIndex) =>
             row.map((cell, colIndex) => (
               <div
                 key={`${rowIndex}-${colIndex}`}
-                className={`
-                  w-6 h-6 rounded-sm border border-white/20 transition-all duration-300
-                  ${cell 
-                    ? `bg-${cell} shadow-lg shadow-${cell}/50 neon-glow` 
-                    : 'bg-white/5 hover:bg-white/10'
-                  }
-                `}
+                className="w-6 h-6 rounded-sm border border-white/20 transition-all duration-300 bg-blue-500"
               />
             ))
           )}

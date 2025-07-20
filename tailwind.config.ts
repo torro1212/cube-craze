@@ -72,6 +72,32 @@ export default {
 				space: {
 					dark: 'hsl(var(--space-dark))',
 					light: 'hsl(var(--space-light))'
+				},
+				// Block colors for the game
+				red: {
+					400: '#ff4444',
+					500: '#ff0000',
+					600: '#cc0000'
+				},
+				green: {
+					400: '#44ff44',
+					500: '#00ff00',
+					600: '#00cc00'
+				},
+				blue: {
+					400: '#4444ff',
+					500: '#0000ff',
+					600: '#0000cc'
+				},
+				yellow: {
+					400: '#ffff44',
+					500: '#ffff00',
+					600: '#cccc00'
+				},
+				purple: {
+					400: '#ff44ff',
+					500: '#ff00ff',
+					600: '#cc00cc'
 				}
 			},
 			borderRadius: {
