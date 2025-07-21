@@ -161,18 +161,27 @@ const Game = () => {
 
   // Check if shape can be placed at position
   const canPlaceShape = (shape: number[][], row: number, col: number): boolean => {
+    console.log(`=== CAN PLACE SHAPE DEBUG ===`);
     console.log(`Checking if shape can be placed at ${row},${col}`);
+    console.log(`Shape:`, shape);
+    console.log(`Board state:`, board);
+    
     for (let r = 0; r < shape.length; r++) {
       for (let c = 0; c < shape[r].length; c++) {
         if (shape[r][c] === 1) {
           const newRow = row + r;
           const newCol = col + c;
           
+          console.log(`Checking shape part at ${r},${c} -> board position ${newRow},${newCol}`);
+          console.log(`Board value at ${newRow},${newCol}:`, board[newRow]?.[newCol]);
+          
+          // בדוק גבולות
           if (newRow >= 10 || newCol >= 10 || newRow < 0 || newCol < 0) {
             console.log(`Position ${newRow},${newCol} is out of bounds`);
             return false;
           }
           
+          // בדוק אם התא ריק - אפשר להניח על תא ריק
           if (board[newRow][newCol] !== null) {
             console.log(`Position ${newRow},${newCol} is occupied by ${board[newRow][newCol]}`);
             return false;
@@ -184,24 +193,49 @@ const Game = () => {
     return true;
   };
 
+  // פונקציה פשוטה לבדיקת תקינות
+  const isValidPosition = (shape: number[][], row: number, col: number): boolean => {
+    return canPlaceShape(shape, row, col);
+  };
+
   // Place shape on board with enhanced effects
   const placeShape = (shape: Polyomino, row: number, col: number) => {
-    if (!canPlaceShape(shape.shape, row, col)) return false;
+    console.log(`=== PLACE SHAPE DEBUG ===`);
+    console.log(`Attempting to place shape at ${row},${col}`);
+    console.log(`Shape:`, shape);
+    console.log(`Current board state:`, board);
+    
+    // בדוק אם אפשר להניח בכלל
+    if (!canPlaceShape(shape.shape, row, col)) {
+      console.log(`Cannot place shape at ${row},${col} - invalid position`);
+      return false;
+    }
+    
+    console.log(`Can place shape - proceeding with placement`);
+    console.log(`Placing shape at ${row},${col}`);
 
     setIsPlacingShape(true);
     
     const newBoard = board.map(row => [...row]);
     let blocksPlaced = 0;
 
+    console.log(`Updating board with shape at ${row},${col}`);
+    console.log(`Shape to place:`, shape.shape);
+    
     for (let r = 0; r < shape.shape.length; r++) {
       for (let c = 0; c < shape.shape[r].length; c++) {
         if (shape.shape[r][c] === 1) {
-          newBoard[row + r][col + c] = shape.color;
+          const targetRow = row + r;
+          const targetCol = col + c;
+          console.log(`Placing block at ${targetRow},${targetCol} with color ${shape.color}`);
+          newBoard[targetRow][targetCol] = shape.color;
           blocksPlaced++;
         }
       }
     }
 
+    console.log(`Placed ${blocksPlaced} blocks`);
+    console.log(`New board state:`, newBoard);
     setBoard(newBoard);
     
     // Update color charge (for all colors)
@@ -324,15 +358,22 @@ const Game = () => {
 
   // Check if any current shape can be placed
   const canPlaceAnyShape = useCallback((): boolean => {
+    console.log('=== CHECKING IF ANY SHAPE CAN BE PLACED ===');
+    console.log('Current shapes:', currentShapes);
+    console.log('Board state:', board);
+    
     for (const shape of currentShapes) {
+      console.log(`Checking shape:`, shape);
       for (let row = 0; row < 10; row++) {
         for (let col = 0; col < 10; col++) {
           if (canPlaceShape(shape.shape, row, col)) {
+            console.log(`✅ Found valid position for shape at ${row},${col}`);
             return true;
           }
         }
       }
     }
+    console.log('❌ No valid positions found for any shape');
     return false;
   }, [currentShapes, board]);
 
@@ -346,6 +387,62 @@ const Game = () => {
       setShowAdOption(true);
     }
   }, [currentShapes, canPlaceAnyShape, shieldActive, generateRandomShapes]);
+
+  // Add document event listeners for drag
+  useEffect(() => {
+    const handleDocumentMouseMove = (e: MouseEvent) => {
+      console.log('=== DOCUMENT MOUSE MOVE ===');
+      if (isDragging && touchDraggedShape && touchStartPos) {
+        console.log('Document mouse move - updating drag preview');
+        setDragPreview({
+          x: e.clientX,
+          y: e.clientY,
+          shape: touchDraggedShape
+        });
+      }
+    };
+
+    const handleDocumentMouseUp = (e: MouseEvent) => {
+      console.log('=== DOCUMENT MOUSE UP ===');
+      if (isDragging && touchDraggedShape) {
+        console.log('Document mouse up - ending drag');
+        // Reset drag state
+        setTouchDraggedShape(null);
+        setTouchStartPos(null);
+        setIsDragging(false);
+        setDragPreview(null);
+        setHoveredCell(null);
+      }
+    };
+
+    const handleDocumentClick = (e: MouseEvent) => {
+      console.log('=== DOCUMENT CLICK ===', e.target);
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-test="shape-button"]')) {
+        console.log('=== SHAPE BUTTON CLICKED ===');
+      }
+    };
+
+    const handleDocumentMouseDown = (e: MouseEvent) => {
+      console.log('=== DOCUMENT MOUSE DOWN ===', e.target);
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-test="shape-button"]')) {
+        console.log('=== SHAPE BUTTON MOUSE DOWN ===');
+      }
+    };
+
+    document.addEventListener('mousemove', handleDocumentMouseMove);
+    document.addEventListener('mouseup', handleDocumentMouseUp);
+    document.addEventListener('click', handleDocumentClick);
+    document.addEventListener('mousedown', handleDocumentMouseDown);
+
+    return () => {
+      document.removeEventListener('mousemove', handleDocumentMouseMove);
+      document.removeEventListener('mouseup', handleDocumentMouseUp);
+      document.removeEventListener('click', handleDocumentClick);
+      document.removeEventListener('mousedown', handleDocumentMouseDown);
+    };
+  }, [isDragging, touchDraggedShape, touchStartPos]);
 
   // Handle cell click for shape placement
   const handleCellClick = (row: number, col: number) => {
@@ -499,105 +596,143 @@ const Game = () => {
 
   // Touch event handlers for shape dragging
   const handleTouchStart = (e: React.TouchEvent, shape: Polyomino) => {
-    if (clearLineMode) return; // Don't interfere with clear line mode
-    e.preventDefault();
+    console.log('=== TOUCH START ===');
+    if (clearLineMode) {
+      console.log('Clear line mode active, ignoring touch');
+      return;
+    }
+    
     e.stopPropagation();
     const touch = e.touches[0];
 
+    console.log(`Touch start: shape ${shape.id}, position ${touch.clientX},${touch.clientY}`);
+    console.log('Setting touch state...');
+    
     setTouchStartPos({ x: touch.clientX, y: touch.clientY });
     setTouchDraggedShape(shape);
     setIsDragging(true);
     
+    // Start drag preview immediately
+    console.log('Setting drag preview...');
+    setDragPreview({
+      x: touch.clientX,
+      y: touch.clientY,
+      shape: shape
+    });
+    
     // Add visual feedback
     const target = e.currentTarget as HTMLElement;
     target.classList.add('touch-active');
+    console.log('Touch start completed');
   };
 
   // Simplified touch move handler
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (clearLineMode) return;
-    e.preventDefault();
+    console.log('=== TOUCH MOVE ===');
+    if (clearLineMode) {
+      console.log('Clear line mode active, ignoring touch move');
+      return;
+    }
+    
     e.stopPropagation();
-    if (!isDragging || !touchDraggedShape || !touchStartPos) return;
+    if (!isDragging || !touchDraggedShape || !touchStartPos) {
+      console.log(`Touch move: not dragging or missing data`);
+      console.log(`isDragging: ${isDragging}, touchDraggedShape: ${touchDraggedShape?.id}, touchStartPos: ${touchStartPos ? 'exists' : 'null'}`);
+      return;
+    }
 
     const touch = e.touches[0];
-    const deltaX = touch.clientX - touchStartPos.x;
-    const deltaY = touch.clientY - touchStartPos.y;
+    console.log(`Touch move: position ${touch.clientX},${touch.clientY}`);
+    
+    // Update drag preview position immediately
+    console.log('Updating drag preview...');
+    setDragPreview({
+      x: touch.clientX,
+      y: touch.clientY,
+      shape: touchDraggedShape
+    });
 
-    // Only start dragging if moved more than 10px
-    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
-      setSelectedShape(touchDraggedShape);
+    // Update hoveredCell based on touch position
+    const gameBoardElement = e.currentTarget.closest('.game-grid');
+    if (gameBoardElement) {
+      const rect = gameBoardElement.getBoundingClientRect();
+      const cellSize = 32; // w-8 = 32px
+      const gap = 4; // gap-1 = 4px
+      const totalCellSize = cellSize + gap;
       
-      // Update drag preview position
-      setDragPreview({
-        x: touch.clientX,
-        y: touch.clientY,
-        shape: touchDraggedShape
-      });
-
-      // Update hoveredCell based on touch position
-      const gameBoardElement = e.currentTarget.closest('.game-grid');
-      if (gameBoardElement) {
-        const rect = gameBoardElement.getBoundingClientRect();
-        const cellSize = 32; // w-8 = 32px
-        const gap = 4; // gap-1 = 4px
-        const totalCellSize = cellSize + gap;
-        
-        const adjustedX = (touch.clientX - rect.left) - (gap / 2);
-        const adjustedY = (touch.clientY - rect.top) - (gap / 2);
-        
-        const col = Math.floor(adjustedX / totalCellSize);
-        const row = Math.floor(adjustedY / totalCellSize);
-        
-        console.log(`Touch position: ${touch.clientX},${touch.clientY} -> Grid: ${row},${col}`);
-        
-        if (row >= 0 && row < 10 && col >= 0 && col < 10) {
-          setHoveredCell({ row, col });
-        }
+      const adjustedX = (touch.clientX - rect.left) - (gap / 2);
+      const adjustedY = (touch.clientY - rect.top) - (gap / 2);
+      
+      const col = Math.floor(adjustedX / totalCellSize);
+      const row = Math.floor(adjustedY / totalCellSize);
+      
+      console.log(`Touch position: ${touch.clientX},${touch.clientY}`);
+      console.log(`Grid rect: left=${rect.left}, top=${rect.top}`);
+      console.log(`Adjusted: x=${adjustedX}, y=${adjustedY}`);
+      console.log(`Cell size: ${cellSize}, gap: ${gap}, total: ${totalCellSize}`);
+      console.log(`Calculated grid: row=${row}, col=${col}`);
+      
+      if (row >= 0 && row < 10 && col >= 0 && col < 10) {
+        console.log(`Touch: Setting hoveredCell to: ${row},${col}`);
+        setHoveredCell({ row, col });
+      }
+      
+      if (row >= 0 && row < 10 && col >= 0 && col < 10) {
+        console.log(`Touch: Setting hoveredCell to: ${row},${col}`);
+        setHoveredCell({ row, col });
       }
     }
   };
 
   // Simplified mouse move handler
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !touchDraggedShape || !touchStartPos) return;
+    console.log('=== MOUSE MOVE ===');
+    if (!isDragging || !touchDraggedShape || !touchStartPos) {
+      console.log(`Mouse move: not dragging or missing data`);
+      console.log(`isDragging: ${isDragging}, touchDraggedShape: ${touchDraggedShape?.id}, touchStartPos: ${touchStartPos ? 'exists' : 'null'}`);
+      return;
+    }
     
-    const deltaX = e.clientX - touchStartPos.x;
-    const deltaY = e.clientY - touchStartPos.y;
-    
-    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
-      setDragPreview({
-        x: e.clientX,
-        y: e.clientY,
-        shape: touchDraggedShape
-      });
+    // Update drag preview position immediately
+    setDragPreview({
+      x: e.clientX,
+      y: e.clientY,
+      shape: touchDraggedShape
+    });
 
-      // Update hoveredCell based on mouse position
-      const gameBoardElement = e.currentTarget.closest('.game-grid');
-      if (gameBoardElement) {
-        const rect = gameBoardElement.getBoundingClientRect();
-        const cellSize = 32; // w-8 = 32px
-        const gap = 4; // gap-1 = 4px
-        const totalCellSize = cellSize + gap;
-        
-        const adjustedX = (e.clientX - rect.left) - (gap / 2);
-        const adjustedY = (e.clientY - rect.top) - (gap / 2);
-        
-        const col = Math.floor(adjustedX / totalCellSize);
-        const row = Math.floor(adjustedY / totalCellSize);
-        
-        console.log(`Mouse position: ${e.clientX},${e.clientY} -> Grid: ${row},${col}`);
-        
-        if (row >= 0 && row < 10 && col >= 0 && col < 10) {
-          setHoveredCell({ row, col });
-        }
+    // Update hoveredCell based on mouse position
+    const gameBoardElement = e.currentTarget.closest('.game-grid');
+    if (gameBoardElement) {
+      const rect = gameBoardElement.getBoundingClientRect();
+      const cellSize = 32; // w-8 = 32px
+      const gap = 4; // gap-1 = 4px
+      const totalCellSize = cellSize + gap;
+      
+      const adjustedX = (e.clientX - rect.left) - (gap / 2);
+      const adjustedY = (e.clientY - rect.top) - (gap / 2);
+      
+      const col = Math.floor(adjustedX / totalCellSize);
+      const row = Math.floor(adjustedY / totalCellSize);
+      
+      console.log(`Mouse position: ${e.clientX},${e.clientY}`);
+      console.log(`Grid rect: left=${rect.left}, top=${rect.top}`);
+      console.log(`Adjusted: x=${adjustedX}, y=${adjustedY}`);
+      console.log(`Cell size: ${cellSize}, gap: ${gap}, total: ${totalCellSize}`);
+      console.log(`Calculated grid: row=${row}, col=${col}`);
+      
+      if (row >= 0 && row < 10 && col >= 0 && col < 10) {
+        console.log(`Mouse: Setting hoveredCell to: ${row},${col}`);
+        setHoveredCell({ row, col });
+      } else {
+        console.log(`Mouse: Position out of bounds, clearing hoveredCell`);
+        setHoveredCell(null);
       }
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (clearLineMode) return; // Don't interfere with clear line mode
-    e.preventDefault();
+    // Don't call preventDefault here to avoid passive listener issues
     e.stopPropagation();
     if (!isDragging || !touchDraggedShape) return;
     
@@ -619,43 +754,77 @@ const Game = () => {
       // Get the grid container
       const gridContainer = boardElement.querySelector('.game-grid') as HTMLElement;
       if (gridContainer) {
-        const gridRect = gridContainer.getBoundingClientRect();
-        const gridX = touch.clientX - gridRect.left;
-        const gridY = touch.clientY - gridRect.top;
+        try {
+          const gridRect = gridContainer.getBoundingClientRect();
+          const gridX = touch.clientX - gridRect.left;
+          const gridY = touch.clientY - gridRect.top;
+          
+          // Calculate grid position more accurately
+          const cellSize = 32; // w-8 = 32px
+          const gap = 4; // gap-1 = 4px
+          const totalCellSize = cellSize + gap;
+          
+          // Calculate position directly
+          let col = Math.floor(gridX / totalCellSize);
+          let row = Math.floor(gridY / totalCellSize);
         
-        // Calculate grid position more accurately
-        const cellSize = 32; // w-8 = 32px
-        const gap = 4; // gap-1 = 4px
-        const totalCellSize = cellSize + gap;
+        // מרכז את הצל - הזז את המיקום לפי גודל הצורה
+        const shape = touchDraggedShape.shape;
+        const shapeWidth = shape[0].length;
+        const shapeHeight = shape.length;
         
-        // Adjust for gap offset
-        const adjustedGridX = gridX - (gap / 2);
-        const adjustedGridY = gridY - (gap / 2);
-        
-        const col = Math.floor(adjustedGridX / totalCellSize);
-        const row = Math.floor(adjustedGridY / totalCellSize);
-        
-
-        
-        // Check if position is valid and place shape
-        if (col >= 0 && col < 10 && row >= 0 && row < 10) {
-          if (canPlaceShape(touchDraggedShape.shape, row, col)) {
-            placeShape(touchDraggedShape, row, col);
-            toast.success("Shape placed!", {
-              description: `Placed ${touchDraggedShape.size}-block shape at row ${row}, col ${col}`,
-              duration: 1500
-            });
+        // הזז את המיקום כך שהצורה תהיה ממורכזת
+        col = Math.max(0, col - Math.floor(shapeWidth / 2));
+        row = Math.max(0, row - Math.floor(shapeHeight / 2));
+          
+          console.log(`Touch end position: ${touch.clientX},${touch.clientY}`);
+          console.log(`Grid rect: left=${gridRect.left}, top=${gridRect.top}`);
+          console.log(`Grid position: x=${gridX}, y=${gridY}`);
+          console.log(`Final grid: row=${row}, col=${col}`);
+          
+          // Check if position is valid and place shape
+          if (col >= 0 && col < 10 && row >= 0 && row < 10) {
+            console.log(`Attempting to place shape at ${row},${col}`);
+            console.log(`Shape:`, touchDraggedShape.shape);
+            console.log(`Board state at ${row},${col}:`, board[row]?.[col]);
+            
+            const canPlace = canPlaceShape(touchDraggedShape.shape, row, col);
+            console.log(`Can place shape: ${canPlace}`);
+            
+            if (canPlace) {
+              console.log(`Placing shape at ${row},${col}`);
+              const success = placeShape(touchDraggedShape, row, col);
+              console.log(`Place shape result: ${success}`);
+              
+              if (success) {
+                console.log(`✅ Shape placed successfully at ${row},${col}`);
+                toast.success("Shape placed!", {
+                  description: `Placed ${touchDraggedShape.size}-block shape at row ${row}, col ${col}`,
+                  duration: 1500
+                });
+              } else {
+                console.log(`❌ Failed to place shape at ${row},${col}`);
+                toast.error("Failed to place shape", {
+                  description: "Unknown error occurred",
+                  duration: 2000
+                });
+              }
+            } else {
+              console.log(`Cannot place shape at ${row},${col} - invalid position`);
+              toast.error("Cannot place shape here", {
+                description: "Invalid position or occupied cell",
+                duration: 2000
+              });
+            }
           } else {
-            toast.error("Cannot place shape here", {
-              description: "Invalid position or occupied cell",
+            console.log(`Position ${row},${col} is out of bounds`);
+            toast.error("Outside board area", {
+              description: "Please drop the shape within the game board",
               duration: 2000
             });
           }
-        } else {
-          toast.error("Outside board area", {
-            description: "Please drop the shape within the game board",
-            duration: 2000
-          });
+        } catch (error) {
+          console.log('Error calculating touch end position:', error);
         }
       }
     }
@@ -704,6 +873,30 @@ const Game = () => {
       });
     }, 90000);
   };
+
+  // Debug logging for render
+  console.log('=== RENDER ===');
+  console.log(`isDragging: ${isDragging}`);
+  console.log(`touchDraggedShape: ${touchDraggedShape?.id || 'null'}`);
+  console.log(`dragPreview: ${dragPreview ? 'exists' : 'null'}`);
+  console.log(`hoveredCell: ${hoveredCell ? `${hoveredCell.row},${hoveredCell.col}` : 'null'}`);
+  
+  // Force re-render if dragging
+  if (isDragging && touchDraggedShape) {
+    console.log('=== DRAGGING STATE ACTIVE ===');
+    console.log('Should show white glow on valid cells');
+    if (hoveredCell) {
+      console.log(`Hovered cell: ${hoveredCell.row},${hoveredCell.col}`);
+      console.log(`Shape: ${JSON.stringify(touchDraggedShape.shape)}`);
+    }
+  }
+  
+  // Simple test - always log if dragging
+  if (isDragging) {
+    console.log('=== SHAPE PREVIEW TEST ===');
+    console.log('isDragging is true - should show shape preview');
+    console.log('Looking for cells to highlight with white glow');
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-space-dark to-space-light">
@@ -886,39 +1079,100 @@ const Game = () => {
           <div className="lg:col-span-2 order-1">
             <div 
               className="block-blast-board p-6"
-              onMouseMove={handleMouseMove}
+              onMouseMove={(e) => {
+                console.log('=== MOUSE MOVE BOARD ===');
+                handleMouseMove(e);
+                
+                // אם גוררים צורה, עדכן את המיקום
+                if (isDragging && touchDraggedShape) {
+                  try {
+                    const boardElement = document.querySelector('.block-blast-board') as HTMLElement;
+                    if (boardElement) {
+                      const gridContainer = boardElement.querySelector('.game-grid') as HTMLElement;
+                      if (gridContainer) {
+                        const rect = gridContainer.getBoundingClientRect();
+                        
+                        // חשב את הגודל האמיתי של התאים
+                        const cellSize = 32; // w-8 = 32px
+                        const gap = 4; // gap-1 = 4px
+                        
+                        const relativeX = e.clientX - rect.left;
+                        const relativeY = e.clientY - rect.top;
+                        
+                        // חשב את המיקום עם הגודל האמיתי
+                        let col = Math.floor(relativeX / (cellSize + gap));
+                        let row = Math.floor(relativeY / (cellSize + gap));
+                        
+                        // מרכז את הצל - הזז את המיקום לפי גודל הצורה
+                        const shape = touchDraggedShape.shape;
+                        const shapeWidth = shape[0].length;
+                        const shapeHeight = shape.length;
+                        
+                        // הזז את המיקום כך שהצורה תהיה ממורכזת
+                        col = Math.max(0, col - Math.floor(shapeWidth / 2));
+                        row = Math.max(0, row - Math.floor(shapeHeight / 2));
+                        
+                        // וודא שהמיקום בטווח
+                        col = Math.max(0, Math.min(col, 9));
+                        row = Math.max(0, Math.min(row, 9));
+                        
+                        console.log(`Mouse move over board: ${row},${col}`);
+                        setHoveredCell({ row, col });
+                      }
+                    }
+                  } catch (error) {
+                    console.log('Error calculating mouse move position:', error);
+                  }
+                }
+              }}
               onMouseUp={(e) => {
                 if (isDragging && touchDraggedShape) {
-                  const boardElement = document.querySelector('.block-blast-board') as HTMLElement;
-                  if (boardElement) {
-                    const gridContainer = boardElement.querySelector('.game-grid') as HTMLElement;
-                    if (gridContainer) {
-                      const gridRect = gridContainer.getBoundingClientRect();
-                      const gridX = e.clientX - gridRect.left;
-                      const gridY = e.clientY - gridRect.top;
-                      
-                      const cellSize = 32;
-                      const gap = 4;
-                      const totalCellSize = cellSize + gap;
-                      
-                      const col = Math.floor(gridX / totalCellSize);
-                      const row = Math.floor(gridY / totalCellSize);
-                      
-                      if (col >= 0 && col < 10 && row >= 0 && row < 10) {
-                        if (canPlaceShape(touchDraggedShape.shape, row, col)) {
-                          placeShape(touchDraggedShape, row, col);
-                          toast.success("Shape placed!", {
-                            description: `Placed ${touchDraggedShape.size}-block shape at row ${row}, col ${col}`,
-                            duration: 1500
-                          });
-                        } else {
-                          toast.error("Cannot place shape here", {
-                            description: "Invalid position or occupied cell",
-                            duration: 2000
-                          });
+                  try {
+                    const boardElement = document.querySelector('.block-blast-board') as HTMLElement;
+                    if (boardElement) {
+                      const gridContainer = boardElement.querySelector('.game-grid') as HTMLElement;
+                      if (gridContainer) {
+                        const gridRect = gridContainer.getBoundingClientRect();
+                        const gridX = e.clientX - gridRect.left;
+                        const gridY = e.clientY - gridRect.top;
+                        
+                        // חשב את הגודל האמיתי של התאים
+                        const cellSize = 32; // w-8 = 32px
+                        const gap = 4; // gap-1 = 4px
+                        const totalCellSize = cellSize + gap;
+                        
+                        let col = Math.floor(gridX / totalCellSize);
+                        let row = Math.floor(gridY / totalCellSize);
+                        
+                        // התאם את המיקום לפי גודל הצורה
+                        const shape = touchDraggedShape.shape;
+                        const shapeWidth = shape[0].length;
+                        const shapeHeight = shape.length;
+                        
+                        // הזז את המיקום כך שהצורה תהיה ממורכזת
+                        col = Math.max(0, col - Math.floor(shapeWidth / 2));
+                        row = Math.max(0, row - Math.floor(shapeHeight / 2));
+                        
+                        console.log(`Mouse up: position ${e.clientX},${e.clientY} -> Grid: ${row},${col}`);
+                        
+                        if (col >= 0 && col < 10 && row >= 0 && row < 10) {
+                          if (canPlaceShape(touchDraggedShape.shape, row, col)) {
+                            placeShape(touchDraggedShape, row, col);
+                            toast.success("Shape placed!", {
+                              description: `Placed ${touchDraggedShape.size}-block shape at row ${row}, col ${col}`,
+                              duration: 1500
+                            });
+                          } else {
+                            toast.error("Cannot place shape here", {
+                              description: "Invalid position or occupied cell",
+                              duration: 2000
+                            });
+                          }
                         }
                       }
                     }
+                  } catch (error) {
+                    console.log('Error calculating mouse up position:', error);
                   }
                   
                   // Reset state
@@ -929,9 +1183,19 @@ const Game = () => {
                   setHoveredCell(null);
                 }
               }}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              style={{ touchAction: 'none' }}
+              onTouchMove={(e) => {
+                console.log('=== TOUCH MOVE BOARD ===');
+                handleTouchMove(e);
+              }}
+              onTouchEnd={(e) => {
+                console.log('=== TOUCH END BOARD ===');
+                handleTouchEnd(e);
+              }}
+              style={{ 
+                touchAction: 'none',
+                WebkitTouchCallout: 'none',
+                WebkitTapHighlightColor: 'transparent'
+              }}
             >
               <div className="grid grid-cols-10 gap-1 max-w-sm sm:max-w-md mx-auto game-grid">
                 {board.map((row, rowIndex) =>
@@ -940,8 +1204,46 @@ const Game = () => {
                       key={`${rowIndex}-${colIndex}`}
                       data-cell={`${rowIndex}-${colIndex}`}
                       onClick={() => handleCellClick(rowIndex, colIndex)}
-                      onMouseEnter={() => setHoveredCell({ row: rowIndex, col: colIndex })}
-                      onMouseLeave={() => setHoveredCell(null)}
+                      onMouseEnter={() => {
+                        console.log(`Mouse enter cell: ${rowIndex},${colIndex}`);
+                        setHoveredCell({ row: rowIndex, col: colIndex });
+                        if (isDragging && touchDraggedShape) {
+                          console.log(`Set hoveredCell to: ${rowIndex},${colIndex} during drag`);
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        console.log(`Mouse leave cell: ${rowIndex},${colIndex}`);
+                        setHoveredCell(null);
+                      }}
+                      onMouseMove={(e) => {
+                        if (isDragging && touchDraggedShape) {
+                          console.log(`Mouse move over cell: ${rowIndex},${colIndex}`);
+                          setHoveredCell({ row: rowIndex, col: colIndex });
+                          console.log(`Set hoveredCell to: ${rowIndex},${colIndex}`);
+                        }
+                      }}
+                      onMouseOver={(e) => {
+                        if (isDragging && touchDraggedShape) {
+                          console.log(`Mouse over cell: ${rowIndex},${colIndex}`);
+                          setHoveredCell({ row: rowIndex, col: colIndex });
+                          console.log(`Set hoveredCell to: ${rowIndex},${colIndex}`);
+                        }
+                      }}
+                      onMouseDown={() => {
+                        console.log(`Mouse down on cell: ${rowIndex},${colIndex}`);
+                      }}
+                      onTouchMove={(e) => {
+                        if (isDragging && touchDraggedShape) {
+                          console.log(`Touch move over cell: ${rowIndex},${colIndex}`);
+                          setHoveredCell({ row: rowIndex, col: colIndex });
+                        }
+                      }}
+                      onTouchStart={(e) => {
+                        if (isDragging && touchDraggedShape) {
+                          console.log(`Touch start over cell: ${rowIndex},${colIndex}`);
+                          setHoveredCell({ row: rowIndex, col: colIndex });
+                        }
+                      }}
                       disabled={isPlacingShape}
                                               className={`
                         w-6 h-6 sm:w-8 sm:h-8 game-block transition-all duration-200
@@ -949,12 +1251,64 @@ const Game = () => {
                           ? `bg-${cell}-500 border-white/30 shadow-md hover:shadow-lg` 
                           : 'bg-blue-900 border-white/20' // כחול קבוע לרקע הלוח
                         }
-                        ${touchDraggedShape && isDragging && hoveredCell && (() => {
-                          // בדוק אם התא הנוכחי הוא חלק מהצורה שאפשר להניח
-                          if (!touchDraggedShape || !hoveredCell) return false;
+                        ${(() => {
+                          // חיווי ויזואלי - מראה בדיוק איפה הצורה תהיה
+                          if (!touchDraggedShape || !isDragging) {
+                            return '';
+                          }
+                          
+                          let startRow = 0, startCol = 0;
+                          
+                          // אם יש hoveredCell, השתמש בו
+                          if (hoveredCell) {
+                            startRow = hoveredCell.row;
+                            startCol = hoveredCell.col;
+                            console.log(`Using hoveredCell: ${startRow},${startCol}`);
+                          } else if (dragPreview) {
+                            // אם אין hoveredCell, חשב לפי המיקום של העכבר
+                            try {
+                              const boardElement = document.querySelector('.block-blast-board') as HTMLElement;
+                              if (boardElement) {
+                                const gridElement = boardElement.querySelector('.game-grid') as HTMLElement;
+                                if (gridElement) {
+                                  const gridRect = gridElement.getBoundingClientRect();
+                                  
+                                  // חשב את הגודל האמיתי של התאים
+                                  const cellSize = 32; // w-8 = 32px
+                                  const gap = 4; // gap-1 = 4px
+                                  
+                                  const relativeX = dragPreview.x - gridRect.left;
+                                  const relativeY = dragPreview.y - gridRect.top;
+                                  
+                                  // חשב את המיקום עם הגודל האמיתי
+                                  startCol = Math.floor(relativeX / (cellSize + gap));
+                                  startRow = Math.floor(relativeY / (cellSize + gap));
+                                  
+                                  // מרכז את הצל - הזז את המיקום לפי גודל הצורה
+                                  const shape = touchDraggedShape.shape;
+                                  const shapeWidth = shape[0].length;
+                                  const shapeHeight = shape.length;
+                                  
+                                  // הזז את המיקום כך שהצורה תהיה ממורכזת
+                                  startCol = Math.max(0, startCol - Math.floor(shapeWidth / 2));
+                                  startRow = Math.max(0, startRow - Math.floor(shapeHeight / 2));
+                                  
+                                  // וודא שהמיקום בטווח
+                                  startCol = Math.max(0, Math.min(startCol, 9));
+                                  startRow = Math.max(0, Math.min(startRow, 9));
+                                  
+                                  console.log(`Grid rect: ${gridRect.left},${gridRect.top} to ${gridRect.right},${gridRect.bottom}`);
+                                  console.log(`Mouse: ${dragPreview.x},${dragPreview.y}, Relative: ${relativeX},${relativeY}`);
+                                  console.log(`Calculated position: ${startRow},${startCol}`);
+                                }
+                              }
+                            } catch (error) {
+                              console.log('Error calculating drag preview position:', error);
+                            }
+                          }
+                          
                           const shape = touchDraggedShape.shape;
-                          const startRow = hoveredCell.row;
-                          const startCol = hoveredCell.col;
+                          console.log(`Checking cell ${rowIndex},${colIndex} for shape at ${startRow},${startCol}`);
                           
                           // בדוק אם התא הנוכחי הוא חלק מהצורה
                           for (let r = 0; r < shape.length; r++) {
@@ -964,22 +1318,94 @@ const Game = () => {
                                 const targetCol = startCol + c;
                                 if (targetRow === rowIndex && targetCol === colIndex) {
                                   const canPlace = canPlaceShape(shape, startRow, startCol);
-                                  console.log(`Cell ${rowIndex},${colIndex}: canPlace = ${canPlace}`);
-                                  return canPlace;
+                                  console.log(`Cell ${rowIndex},${colIndex}: Shape part at ${r},${c} -> ${targetRow},${targetCol}, canPlace = ${canPlace}`);
+                                  
+                                  if (canPlace) {
+                                    // חיווי לבן זוהר - אפשר להניח כאן
+                                    console.log(`Cell ${rowIndex},${colIndex}: Adding white glow`);
+                                    return 'ring-2 ring-white ring-opacity-100 shadow-lg shadow-white/80 animate-pulse enhanced-white-glow';
+                                  } else {
+                                    // חיווי אדום - לא אפשר להניח כאן
+                                    console.log(`Cell ${rowIndex},${colIndex}: Adding red ring`);
+                                    return 'ring-2 ring-red-400 ring-opacity-100 shadow-lg shadow-red-400/50 invalid-preview';
+                                  }
                                 }
                               }
                             }
                           }
-                          return false;
-                        })()
-                          ? 'ring-2 sm:ring-4 ring-white ring-opacity-100 bg-white/40 shadow-lg shadow-white/50' // חיווי לבן זוהר לכל הצורה
-                          : ''
-                        }
+                          
+                          // אם לא מצאנו התאמה, נסה לחשב לפי המיקום הנוכחי
+                          if (isDragging && touchDraggedShape && dragPreview) {
+                            console.log(`Cell ${rowIndex},${colIndex}: No shape match, checking if should highlight`);
+                            // נסה לחשב אם התא הנוכחי צריך להיות מודגש
+                            try {
+                              const boardElement = document.querySelector('.block-blast-board') as HTMLElement;
+                              if (boardElement) {
+                                const gridElement = boardElement.querySelector('.game-grid') as HTMLElement;
+                                if (gridElement) {
+                                  const gridRect = gridElement.getBoundingClientRect();
+                                  const cellSize = 32; // w-8 = 32px
+                                  const gap = 4; // gap-1 = 4px
+                                  
+                                  const relativeX = dragPreview.x - gridRect.left;
+                                  const relativeY = dragPreview.y - gridRect.top;
+                                  
+                                  const mouseCol = Math.floor(relativeX / (cellSize + gap));
+                                  const mouseRow = Math.floor(relativeY / (cellSize + gap));
+                                  
+                                  // מרכז את הצל - הזז את המיקום לפי גודל הצורה
+                                  const shape = touchDraggedShape.shape;
+                                  const shapeWidth = shape[0].length;
+                                  const shapeHeight = shape.length;
+                                  
+                                  const centeredCol = Math.max(0, mouseCol - Math.floor(shapeWidth / 2));
+                                  const centeredRow = Math.max(0, mouseRow - Math.floor(shapeHeight / 2));
+                                  
+                                  if (centeredRow === rowIndex && centeredCol === colIndex) {
+                                    console.log(`Cell ${rowIndex},${colIndex}: Mouse is over this cell, adding white glow`);
+                                    return 'ring-2 ring-white ring-opacity-100 shadow-lg shadow-white/80 animate-pulse enhanced-white-glow';
+                                  }
+                                }
+                              }
+                            } catch (error) {
+                              console.log(`Error calculating highlight for cell ${rowIndex},${colIndex}:`, error);
+                            }
+                          }
+                          
+                          return '';
+                        })()}
                         ${isPlacingShape ? 'cursor-not-allowed' : 'cursor-pointer'}
                       `}
-                      style={{
-                        background: cell ? getColorGradient(cell) : undefined
-                      }}
+                                              style={{
+                          background: (() => {
+                            // אם זה חלק מהצורה הנגררת, הצג את הצבע שלה
+                            if (touchDraggedShape && isDragging && hoveredCell) {
+                              const shape = touchDraggedShape.shape;
+                              const startRow = hoveredCell.row;
+                              const startCol = hoveredCell.col;
+                              
+                              for (let r = 0; r < shape.length; r++) {
+                                for (let c = 0; c < shape[r].length; c++) {
+                                  if (shape[r][c] === 1) {
+                                    const targetRow = startRow + r;
+                                    const targetCol = startCol + c;
+                                    if (targetRow === rowIndex && targetCol === colIndex) {
+                                      const canPlace = canPlaceShape(shape, startRow, startCol);
+                                      if (canPlace) {
+                                        return getColorGradient(touchDraggedShape.color);
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                            // אחרת, הצג את הצבע הרגיל של התא
+                            return cell ? getColorGradient(cell) : undefined;
+                          })(),
+                          touchAction: 'none',
+                          WebkitTouchCallout: 'none',
+                          WebkitTapHighlightColor: 'transparent'
+                        }}
                     />
                   ))
                 )}
@@ -989,53 +1415,142 @@ const Game = () => {
             {/* Current Shapes - Mobile Optimized */}
             <div className="game-cube p-3 sm:p-6 mt-4">
               <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-center">Current Shapes</h3>
+              
+              {/* Visual Legend */}
+              {isDragging && touchDraggedShape && (
+                <div className="mb-3 p-2 bg-blue-900/50 rounded text-xs text-center">
+                  <div className="text-white/90 mb-2 font-semibold">Shape Preview</div>
+                  <div className="flex justify-center gap-4 text-white/80">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-green-400/30 border-2 border-green-400 rounded animate-pulse"></div>
+                      <span>Valid Position</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-red-400/30 border-2 border-red-400 rounded animate-pulse"></div>
+                      <span>Invalid Position</span>
+                    </div>
+                  </div>
+                  <div className="text-white/70 mt-1 text-xs">
+                    Drag to see where the shape will be placed
+                  </div>
+                  <div className="text-white/60 mt-1 text-xs">
+                    Green = Valid, Red = Invalid, Color = Shape preview
+                  </div>
+                </div>
+              )}
               <div className="flex justify-center gap-2 sm:gap-4 overflow-x-auto">
                 {currentShapes.map((shape) => (
-                  <button
+                  <div
                     key={shape.id}
-                    onClick={() => setSelectedShape(shape)}
-                    onTouchStart={(e) => handleTouchStart(e, shape)}
-                    onTouchMove={handleTouchMove}
-                    onTouchEnd={handleTouchEnd}
+                    onClick={(e) => {
+                      console.log('=== CLICK ===', e.target);
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSelectedShape(shape);
+                    }}
+                    onMouseEnter={(e) => {
+                      console.log('=== MOUSE ENTER ===', e.target);
+                    }}
+                    onMouseLeave={(e) => {
+                      console.log('=== MOUSE LEAVE ===', e.target);
+                    }}
+                    onTouchStart={(e) => {
+                      console.log('=== TOUCH START BUTTON ===', e.target);
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleTouchStart(e, shape);
+                    }}
+                    onTouchMove={(e) => {
+                      console.log('=== TOUCH MOVE BUTTON ===', e.target);
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleTouchMove(e);
+                    }}
+                    onTouchEnd={(e) => {
+                      console.log('=== TOUCH END BUTTON ===', e.target);
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleTouchEnd(e);
+                    }}
                     onMouseDown={(e) => {
+                      console.log('=== MOUSE DOWN ===', e.target);
                       // For desktop testing
                       e.preventDefault();
                       e.stopPropagation();
+                      console.log(`Mouse down: shape ${shape.id}, position ${e.clientX},${e.clientY}`);
+                      console.log('Setting mouse drag state...');
+                      
+                      // Set state immediately
                       setTouchStartPos({ x: e.clientX, y: e.clientY });
                       setTouchDraggedShape(shape);
                       setIsDragging(true);
+                      
+                      // Start drag preview immediately
+                      console.log('Setting mouse drag preview...');
+                      setDragPreview({
+                        x: e.clientX,
+                        y: e.clientY,
+                        shape: shape
+                      });
+                      console.log('Mouse down completed');
+                      
+                      // Force a re-render to update visual feedback
+                      setTimeout(() => {
+                        console.log('=== FORCED RE-RENDER ===');
+                        console.log(`isDragging: ${isDragging}`);
+                        console.log(`touchDraggedShape: ${touchDraggedShape?.id}`);
+                        console.log('Should show white glow now');
+                      }, 100);
                     }}
-                    disabled={isPlacingShape}
                     className={`
-                      shape-preview p-2 sm:p-3 transition-all duration-200 flex-shrink-0
+                      shape-preview p-2 sm:p-3 transition-all duration-200 flex-shrink-0 cursor-pointer
                       ${selectedShape?.id === shape.id ? 'selected' : ''}
                       ${isPlacingShape ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                       ${isDragging && touchDraggedShape?.id === shape.id ? 'opacity-30 scale-90' : ''}
                     `}
+                    data-shape-id={shape.id}
+                    data-test="shape-button"
                     style={{
-                      touchAction: 'none'
+                      touchAction: 'none',
+                      WebkitTouchCallout: 'none',
+                      WebkitTapHighlightColor: 'transparent',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      MozUserSelect: 'none',
+                      msUserSelect: 'none'
                     }}
                   >
                     <div className="grid gap-1 mb-2" style={{
                       gridTemplateColumns: `repeat(${shape.shape[0].length}, 1fr)`
                     }}>
                       {shape.shape.flat().map((cell, index) => (
-                        <div
-                          key={index}
-                          className={`
-                            w-4 h-4 sm:w-6 sm:h-6 game-block rounded border
-                            ${cell ? `bg-${shape.color}-500 border-white/30 shadow-md` : 'transparent'}
-                          `}
-                          style={{
-                            background: cell ? getColorGradient(shape.color) : 'transparent'
-                          }}
-                        />
+                        cell ? (
+                          <div
+                            key={index}
+                            className={`
+                              w-4 h-4 sm:w-6 sm:h-6 game-block rounded border
+                              bg-${shape.color}-500 border-white/30 shadow-md
+                            `}
+                            style={{
+                              background: getColorGradient(shape.color)
+                            }}
+                            onClick={(e) => {
+                              console.log('=== BLOCK CLICK ===', index);
+                              e.stopPropagation();
+                            }}
+                          />
+                        ) : (
+                          <div key={index} className="w-4 h-4 sm:w-6 sm:h-6" />
+                        )
                       ))}
                     </div>
                     <div className="text-xs text-center text-white/70">
                       {shape.size} blocks
                     </div>
-                  </button>
+                    <div className="text-xs text-center text-red-400 mt-1">
+                      Click me!
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -1096,22 +1611,27 @@ const Game = () => {
             transform: 'translate(-50%, -50%) scale(1.1)',
             filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3))'
           }}
+          data-debug="drag-preview"
         >
+          {(() => { console.log('Rendering drag preview at:', dragPreview.x, dragPreview.y); return null; })()}
           <div className="grid gap-1" style={{
             gridTemplateColumns: `repeat(${dragPreview.shape.shape[0].length}, 1fr)`
           }}>
             {dragPreview.shape.shape.flat().map((cell, index) => (
-              <div
-                key={index}
-                className={`
-                  w-4 h-4 sm:w-5 sm:h-5 rounded border-2 border-white/30
-                  ${cell ? '' : 'transparent'}
-                `}
-                style={{
-                  background: cell ? getColorGradient(dragPreview.shape.color) : 'transparent',
-                  boxShadow: cell ? 'inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.3)' : 'none'
-                }}
-              />
+              cell ? (
+                <div
+                  key={index}
+                  className={`
+                    w-4 h-4 sm:w-5 sm:h-5 rounded border-2 border-white/30
+                  `}
+                  style={{
+                    background: getColorGradient(dragPreview.shape.color),
+                    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 2px 4px rgba(0, 0, 0, 0.3)'
+                  }}
+                />
+              ) : (
+                <div key={index} className="w-4 h-4 sm:w-5 sm:h-5" />
+              )
             ))}
           </div>
         </div>
